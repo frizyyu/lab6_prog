@@ -57,7 +57,6 @@ public class ServerToClient {
                 }
             }
             channel.configureBlocking(false);
-            //buf.clear();
             ByteBuffer buf = ByteBuffer.allocate(65536);
             address = channel.receive(buf);
             byte[] bts = buf.array();
@@ -65,27 +64,26 @@ public class ServerToClient {
             ObjectInputStream ois = new ObjectInputStream(bais);
             r = (Request) ois.readObject();
             logger.log(Level.INFO, String.format("Get request from client %s", r.getUser()));
+            
             //выполнение команды
             String data = commandExecution(r.getCommand(), r);
             r = new Request(r.getCommand(), data, new LinkedHashSet<>(), r.getUser(), null);
             logger.log(Level.INFO, String.format("Send response to client %s", r.getUser()));
             send(r);
             }
-             catch (IOException e) {
-            } catch (ClassNotFoundException e) {
+        catch (IOException e) {} 
+        catch (ClassNotFoundException e) {
             logger.log(Level.WARN, "catch ClassNotFound error");
-                throw new RuntimeException(e);
+            throw new RuntimeException(e);
         }
     }
+    
     public void send(Request r) throws IOException {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         ObjectOutputStream oos = new ObjectOutputStream(bos);
         if (r.getArgs().length() * 2 > 65536) { //обработка не тут
             ar.put(r.getUser(), new ArrayList<>());
-            //ar = new ArrayList<>();
             int n = 8192;
-            //System.out.println(r.getArgs().length());
-            //System.out.println((Math.ceil((float) r.getArgs().length() / n))); //round
             for (int i = 0; i < (Math.ceil(r.getArgs().length() / (float) n)); i++){
                 String res;
                 try {
@@ -93,38 +91,20 @@ public class ServerToClient {
                 } catch (StringIndexOutOfBoundsException er) {
                     res = String.format("%s", r.getArgs().substring(n * i));
                 }
-                //ar.put(r.getUser(), ar.get(r.getUser()).add(res));
                 ar.get(r.getUser()).add(res);
-                //System.out.println(ar);
-                //Request request = new Request(r.getCommand(), res, new LinkedHashSet<>(), r.getUser(), null);
-                /*oos.writeObject(request);
-                //buf.clear();
-                buf = ByteBuffer.wrap(bos.toByteArray());
-                //System.out.println(bos.toByteArray().length);
-                System.out.println(r.getArgs().length());
-                //System.out.println(r.getArgs());
-                System.out.println(res);
-                channel.send(buf, address);
-                channel.send(buf, address);*/
             }
-            //System.out.println(ar);
             r.setArgs(String.format("%sLARGEDATA", ar.get(r.getUser()).size()));
-            //r.setArgs("A large amount of data, it is impossible to transfer");
             //разделение на несколько датаграмм и передача их по очереди
         }
         if (r.getArgs().equals("SENDPLS")){
-            //System.out.println(ar.get("artem"));
             r.setArgs(ar.get(r.getUser()).get(Integer.parseInt(r.getCommand())));
         }
         if (r.getArgs().equals("STOPSENDING")){
-            //System.out.println("ASD");
             r.setArgs("|");
             ar.remove(r.getUser());
         }
         oos.writeObject(r);
-        //buf.clear();
         buf = ByteBuffer.wrap(bos.toByteArray());
-        //System.out.println(bos.toByteArray().length);
         channel.send(buf, address);
     }
     CommandInitializator commandsInitializator;
@@ -135,11 +115,8 @@ public class ServerToClient {
 
         commandsInitializator = new CommandInitializator(collection, ReadFromJson.fileName);
         String r = commandsInitializator.validateAndExecute(data, false);
-        //System.out.println(data.getCommand());
-        //System.out.println(CreateUsersMap.users.size());
         if (Objects.equals(data.getCommand(), "test server status") || Objects.equals(data.getCommand(), "NEWUSER") || Objects.equals(data.getCommand(), "CONNECTCLIENT")) {
             collection = commandsInitializator.collection; //обработка где-то тут
-            //System.out.println(collection);
         }
         else {
             collection = CreateUsersMap.users.get(data.getUser());
@@ -147,9 +124,7 @@ public class ServerToClient {
         if (collection == null){
             CreateUsersMap creator = new CreateUsersMap();
             collection = CreateUsersMap.users.get(data.getUser());
-            //r = commandsInitializator.validateAndExecute(new Request(data.getCommand(), data.getArgs(), null, "NEEDCOLLECTION", null), false);
         }
-        //System.out.println(r);
         return r;
     }
 
